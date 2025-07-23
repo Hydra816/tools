@@ -6,7 +6,6 @@ KafkaProducerService *g_stKafkaProducerService = NULL;
 KafkaConsumerService *g_stKafkaConsumerService = NULL;
 
 
-
 std::map<std::string, std::string> load_config(const std::string& filename) {
     std::ifstream file(filename);
     std::map<std::string, std::string> config;
