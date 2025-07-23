@@ -120,8 +120,11 @@ KafkaProducerService::KafkaProducerService( const char *kafkaConnect, const char
 		{"metadata.broker.list", my_kafkaConnect},
 		{"linger.ms", 100},
 		//{"batch.num.messages", 1024 * 1024},
+		{ "retries", 3 },//重试次数
+		{ "retry.backoff.ms", 200 },//重试间隔
 		{"queue.buffering.max.kbytes", 2000000},
-		{"queue.buffering.max.messages", 1000000}};
+		{"queue.buffering.max.messages", 1000000}
+	};
 	
 	my_config.set_delivery_report_callback(
     [](cppkafka::Producer& producer, const cppkafka::Message& message) {
@@ -134,6 +137,19 @@ KafkaProducerService::KafkaProducerService( const char *kafkaConnect, const char
                       << message.get_offset() << std::endl;
         }
     });
+
+	// my_config.set_delivery_report_callback(
+    // [](cppkafka::Producer& producer, const cppkafka::Message& message) {
+    //     if (message.get_error()) {
+    //         std::cerr << "Message delivery failed: " << message.get_error() << std::endl;
+    //     }
+    //     else {
+    //         std::cout << "Message delivered to topic " << message.get_topic()
+    //                   << " [" << message.get_partition() << "] at offset "
+    //                   << message.get_offset() << std::endl;
+			
+    //     }
+    // });
 
 	my_producer = new Producer(my_config);
 	my_producer->set_timeout((std::chrono::milliseconds)1000); // 1s
@@ -153,10 +169,12 @@ int KafkaProducerService::ProduceMsg(char *msgbuff, int msglen, char *pTopic)
 	if (!my_producer)
 		return -1;
 	
-	string sendmsg = my_key + string((char *)msgbuff, msglen);
+	string sendmsg = string((char *)msgbuff, msglen);
 
-	my_producer->produce(MessageBuilder(pTopic).payload(sendmsg));
-	my_producer->poll((std::chrono::milliseconds)0);
+	//std::cout << "Sendmsg : " << sendmsg << std::endl;
+
+	my_producer->produce(MessageBuilder(pTopic).key(my_key).payload(sendmsg));
+	my_producer->poll((std::chrono::milliseconds)5);
 	
 	return 0;
 }
@@ -212,26 +230,32 @@ int KafkaConsumerService::ConsumerPollMsg(std::vector<string> &vMessage)
 {
 	std::vector<Message> vRecvMessage;
 	string sMsgBuf;
-
-	vRecvMessage = my_consumer->poll_batch((size_t)2000, (std::chrono::milliseconds)1000);
+	//for calculate poll time
+	//auto t1 = std::chrono::steady_clock::now();
+	vRecvMessage = my_consumer->poll_batch((size_t)100, (std::chrono::milliseconds)1000);
+	// auto t2 = std::chrono::steady_clock::now();
+	// std::cout << "Poll used time: " 
+    //       << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() 
+    //       << " ms" << std::endl;
+	
 	if (vRecvMessage.empty())
 		return 1;
 
 	std::cout << "< ConsumerPollMsg > vRecvMessage size = " << vRecvMessage.size() << std::endl;
 	
+	std::string key;
+
 	for (std::vector<Message>::iterator iter = vRecvMessage.begin(); iter != vRecvMessage.end(); iter++)
 	{
 		if (!(*iter).get_error())
 		{
-			//这里到时候如果有多个topic，就不能这样写了
+			key = (*iter).get_key();
+			if(my_key == key)	continue;
 			sMsgBuf = string((char*)(*iter).get_payload().get_data(), (*iter).get_payload().get_size());
 
 			std::cout << "< ConsumerPollMsg > buf = " << sMsgBuf << ", my_key = " << my_key << std::endl;
-			if (0 == strncmp(my_key.c_str(), sMsgBuf.c_str(), my_key.length())) // means send by my self
-				continue;
 
-			//默认不同节点key长度一致
-			vMessage.push_back(sMsgBuf.substr(my_key.length()));
+			vMessage.push_back(sMsgBuf);
 		}
 		else if (!(*iter).is_eof())
 		{
