@@ -1,0 +1,22 @@
+syntax = "proto3"
+
+option cc_generic_service = true;
+
+message HttpRequest {};
+message HttpResponse {};
+
+// rest api  ===> map
+service MyRestfulService{
+    rpc getstats(HttpRequest) returns(HttpResponse);
+    rpc getcpuuseage(HttpRequest) returns(HttpResponse);
+}
+#service name + default_method
+#通过默认方法名访问server具体业务通过解析http_request().unresolved_path() 提供
+service MyDefault{
+    rpc default_method(HttpRequest) returns(HttpResponse);
+}
+
+#service name + method name
+service MyHttpService{
+    rpc getstats(HttpRequest) returns(HttpResponse);
+}
