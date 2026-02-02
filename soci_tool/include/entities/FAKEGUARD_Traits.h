@@ -1,9 +1,9 @@
 #ifndef FAKEGUARD_TRAITS_H
 #define FAKEGUARD_TRAITS_H
 
-#include "../oracle_db/TableTraits.h"
+#include "TableTraits.h"
 #include "FAKEGUARD.h"
-#include "../oracle_db/SafeGet.h"
+#include "SafeGet.h"
 
 // ================= FAKEGUARD Traits特化 =================
 template<>

@@ -1,0 +1,1 @@
+g++ -std=c++17 test.cpp liboracle_api.so -o test -lpthread -ldl -lm -g -I /home/ekko/ioh_oracle_api/include/entities -I /home/ekko/ioh_oracle_api/include/oracle_db -I /install/soci/include/
