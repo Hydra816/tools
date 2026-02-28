@@ -1,0 +1,1 @@
+g++ -O2 -std=c++17 sim.cpp     -I../include  -L../lib -lrdkafka++ -lrdkafka -lcppkafka -o dito_sim
